@@ -24,6 +24,44 @@ api = Api(app)
 def index():
     return "<h1>Code challenge</h1>"
 
+@app.route('/restaurants', methods = ['GET', 'POST'])
+def all_restaurants():
+    if request.method == 'GET':
+        return [r.to_dict(rules=['-restaurant_pizzas']) for r in Restaurant.query.all()], 200
+
+@app.route('/restaurants/<int:id>', methods = ['GET', 'DELETE'])
+def restaurant_by_id(id):
+    restaurant = Restaurant.query.filter(Restaurant.id == id).first()
+    if not restaurant:
+        return {'error': 'Restaurant not found'}, 404
+    if request.method == 'GET':
+        return restaurant.to_dict(), 200
+    if request.method == 'DELETE':
+        db.session.delete(restaurant)
+        db.session.commit()
+        return {}, 204
+    
+@app.route('/pizzas', methods = ['GET'])
+def all_pizzas():
+    return [p.to_dict(rules = ['-restaurant_pizzas']) for p in Pizza.query.all()]
+
+@app.route('/restaurant_pizzas', methods = ['POST'])
+def post_restaurant_pizza():
+    data = request.get_json()
+    try:
+        new_restaurant_pizza = RestaurantPizza(
+            price = data.get('price'),
+            pizza_id = data.get('pizza_id'),
+            restaurant_id = data.get('restaurant_id'),
+        )
+    except ValueError as e:
+        return {
+            "errors": ["validation errors"]
+        }, 400
+    db.session.add(new_restaurant_pizza)
+    db.session.commit()
+    return new_restaurant_pizza.to_dict(), 201
+    
 
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
